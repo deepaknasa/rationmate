@@ -1,271 +1,814 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Store Attendance</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #f5f7fb;
-        margin: 0;
-        padding: 0;
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Score Cards Board</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --text: #1f1f1f;
+      --muted: #6b7280;
+      --shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      --radius: 16px;
+      --black-card: linear-gradient(135deg, #111111, #2b2b2b);
+      --red-card: linear-gradient(135deg, #c62828, #ef5350);
+      --orange-card: linear-gradient(135deg, #ef6c00, #ffb74d);
+      --green-card: linear-gradient(135deg, #2e7d32, #66bb6a);
+      --primary: #1976d2;
+    }
+
+    html {
+      font-size: 16px; /* normalize scaling */
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .header {
+      background: var(--surface);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .title {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-input,
+    .api-input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      background: #fff;
+      outline: none;
+    }
+
+    .search-input:focus,
+    .api-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #374151;
+      color: white;
+    }
+
+    .icon-btn {
+      width: 84px;   /* was 56px → +50% */
+      height: 84px;  /* was 56px → +50% */
+      border: none;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #374151;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.16);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    .icon-btn .icon {
+      font-size: 1.5rem;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.16);
+    }
+
+    .icon-btn .icon {
+      font-size: 1.2rem;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    .config-panel {
+      background: var(--surface);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .status {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .list {
+      display: grid;
+      gap: 14px;
+      min-height: 180px;
+    }
+
+    .card {
+      border-radius: var(--radius);
+      padding: 16px;
+      color: #fff;
+      box-shadow: var(--shadow);
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    .card.dragging {
+      opacity: 0.6;
+      transform: scale(0.98);
+      cursor: grabbing;
+    }
+
+    .card-content {
+      min-width: 0;
+    }
+
+    .card-title {
+      margin: 0 0 6px;
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .card-meta {
+      margin: 0;
+      font-size: 0.92rem;
+      opacity: 0.92;
+    }
+
+    .score-badge {
+      min-width: 78px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-weight: 700;
+      backdrop-filter: blur(4px);
+      font-size: 1.4rem; /* bigger score */
+      justify-self: end;   /* pushes score to right */
+      text-align: right;
+      align-self: center; 
+    }
+
+    .card-black { background: var(--black-card); }
+    .card-red { background: var(--red-card); }
+    .card-orange { background: var(--orange-card); }
+    .card-green { background: var(--green-card); }
+
+    .empty-state {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+      box-shadow: var(--shadow);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      font-size: 0.82rem;
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .chip.black { background: #212121; }
+    .chip.red { background: #d32f2f; }
+    .chip.orange { background: #f57c00; }
+    .chip.green { background: #388e3c; }
+
+    .bottom-bar {
+      position: sticky;
+      bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 16px;
+      padding: 0 8px;
+      z-index: 20;
+    }
+
+    .icon-btn.primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(60, 64, 67, 0.45);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    .loading-spinner {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 6px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #ffffff;
+      animation: spin 0.9s linear infinite;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 92px;
+      transform: translateX(-50%);
+      background: #323232;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+      z-index: 70;
+      max-width: calc(100% - 24px);
+      text-align: center;
+    }
+
+    .toast.hidden {
+      display: none;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .floating-search-btn .icon {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .search-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .search-modal.hidden {
+      display: none;
+    }
+
+    .search-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .search-sheet {
+      position: relative;
+      width: min(100%, 720px);
+      background: var(--surface);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+      padding: 18px;
+      z-index: 1;
+    }
+
+    .search-sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .search-sheet-title {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .search-sheet-body {
+      display: grid;
+      gap: 12px;
+    }
+
+    .search-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .bottom-icons {
+      position: fixed;
+      bottom: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .bottom-icons button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #1976d2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bottom-icons i {
+      font-size: 28px !important;  /* 🔥 force size */
+      line-height: 1;
+    }
+
+    @media (min-width: 641px) {
+      .search-modal {
+        align-items: center;
       }
 
-      .container {
-        max-width: 500px;
-        margin: 40px auto;
-        background: white;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      .search-sheet {
+        border-radius: 24px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 12px;
       }
 
-      h2 {
-        margin-top: 0;
-        margin-bottom: 20px;
-        text-align: center;
+      .toolbar,
+      .config-panel {
+        grid-template-columns: 1fr;
       }
 
-      label {
-        display: block;
-        margin-top: 14px;
-        margin-bottom: 6px;
-        font-weight: bold;
-      }
-
-      input, select, button {
+      .btn {
         width: 100%;
-        padding: 12px;
-        border: 1px solid #d0d7de;
-        border-radius: 8px;
-        box-sizing: border-box;
-        font-size: 14px;
       }
 
-      button {
-        margin-top: 20px;
-        background: #0b57d0;
-        color: white;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
+      .card {
+        grid-template-columns: 3fr 1fr;
       }
 
-      button:disabled {
-        background: #9aa0a6;
-        cursor: not-allowed;
+      .search-actions {
+        grid-template-columns: 1fr;
       }
 
-      .status {
-        margin-top: 16px;
-        padding: 12px;
-        border-radius: 8px;
-        display: none;
-        white-space: pre-line;
+      .icon-btn {
+        width: 96px;   /* was 64px → +50% */
+        height: 96px;
       }
 
-      .status.info {
-        display: block;
-        background: #e8f0fe;
-        color: #174ea6;
+      .icon-btn .icon {
+        font-size: 2.2rem; /* was ~1.5rem */
       }
 
-      .status.success {
-        display: block;
-        background: #e6f4ea;
-        color: #137333;
+      .bottom-bar {
+        gap: 20px;
+        padding: 0 12px;
       }
 
-      .status.error {
-        display: block;
-        background: #fce8e6;
-        color: #c5221f;
+      .material-icons {
+        font-size: 28px !important;
       }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section id="cardList" class="list"></section>
 
-      .small {
-        font-size: 12px;
-        color: #666;
-        margin-top: 8px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h2>Store Attendance</h2>
-
-      <label for="name">Staff Name</label>
-      <input type="text" id="name" placeholder="Enter your name" />
-
-      <label for="store">Store</label>
-      <select id="store">
-        <option value="Chatswood">Chatswood</option>
-        <option value="Blacktown">Blacktown</option>
-      </select>
-
-      <label for="action">Action</label>
-      <select id="action">
-        <option value="Check In">Check In</option>
-        <option value="Check Out">Check Out</option>
-      </select>
-
-      <button id="submitBtn" onclick="submitAttendance()">Submit Attendance</button>
-
-      <div id="status" class="status"></div>
-
-      <div class="small">
-        Location access must be enabled to submit attendance.
-      </div>
+    <div class="bottom-bar">
+      <button id="sortBtn" class="icon-btn" aria-label="Sort cards" title="Sort cards">
+        <span class="icon">⇅</span>
+      </button>
+      <button id="syncBtn" class="icon-btn primary" aria-label="Sync cards" title="Sync cards">
+        <span class="icon">⟳</span>
+      </button>
+      <button id="floatingSearchBtn" class="icon-btn primary" aria-label="Open search" title="Search">
+        <span class="icon">🔍</span>
+      </button>
     </div>
 
-    <script>
-      let config = {
-        allowedRadiusMeters: 200,
-        stores: {}
-      };
+    <div id="loadingOverlay" class="loading-overlay hidden" aria-hidden="true">
+      <div class="loading-spinner"></div>
+    </div>
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          config = result;
-        })
-        .withFailureHandler(function(err) {
-          showStatus("error", "Failed to load configuration: " + err.message);
-        })
-        .getConfig();
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-      function showStatus(type, message) {
-        const status = document.getElementById("status");
-        status.className = "status " + type;
-        status.textContent = message;
+    <div id="searchModal" class="search-modal hidden" aria-hidden="true">
+      <div id="searchBackdrop" class="search-backdrop"></div>
+      <div class="search-sheet" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+        <div class="search-sheet-header">
+          <h2 id="searchTitle" class="search-sheet-title">Search cards</h2>
+          <button id="closeSearchBtn" class="icon-btn" aria-label="Close search" title="Close search">
+            <span class="icon">✕</span>
+          </button>
+        </div>
+        <div class="search-sheet-body">
+          <input id="searchInput" class="search-input" type="text" placeholder="Search by name or id" />
+          <div class="search-actions">
+            <button id="searchBtn" class="btn btn-primary">Search</button>
+            <button id="resetBtn" class="btn btn-secondary">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = ''; // Not used when running inside Apps Script HTML Service
+
+    const state = {
+      items: [],
+      filteredItems: [],
+      draggedId: null,
+      sortMode: 'default',
+    };
+
+    const cardList = document.getElementById('cardList');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const floatingSearchBtn = document.getElementById('floatingSearchBtn');
+    const searchModal = document.getElementById('searchModal');
+    const searchBackdrop = document.getElementById('searchBackdrop');
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
+    const sortBtn = document.getElementById('sortBtn');
+    const syncBtn = document.getElementById('syncBtn');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const toast = document.getElementById('toast');
+
+    function getCardClass(scoreValue) {
+      const score = Number(scoreValue) || 0;
+      if (score < 25) return 'card-black';
+      if (score < 50) return 'card-red';
+      if (score < 75) return 'card-orange';
+      return 'card-green';
+    }
+
+    function render(items) {
+      cardList.innerHTML = '';
+
+      if (!items.length) {
+        cardList.innerHTML = `
+          <div class="empty-state">
+            No cards found.
+          </div>
+        `;
+        return;
       }
 
-      function getCurrentLocation() {
-        return new Promise((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error("Geolocation is not supported by your browser."));
-            return;
-          }
+      items.forEach((item) => {
+        const card = document.createElement('article');
+        card.className = `card ${getCardClass(item.score)}`;
+        card.draggable = true;
+        card.dataset.id = item.id;
 
-          navigator.geolocation.getCurrentPosition(
-            resolve,
-            error => {
-              reject(new Error(getLocationErrorMessage(error)));
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 15000,
-              maximumAge: 0
-            }
-          );
-        });
+        card.innerHTML = `
+            <div class="card-content">
+                <h3 class="card-title">${escapeHtml(item.name)}</h3>
+            </div>
+            <div class="score-badge">${escapeHtml(String(item.score))}%</div>
+            `;
+
+        addDragHandlers(card);
+        cardList.appendChild(card);
+      });
+    }
+
+    function applySearch() {
+      const term = searchInput.value.trim().toLowerCase();
+
+      if (!term) {
+        state.filteredItems = [...state.items];
+      } else {
+        state.filteredItems = state.items.filter((item) =>
+          String(item.id).toLowerCase().includes(term) ||
+          String(item.name).toLowerCase().includes(term)
+        );
       }
 
-      function getLocationErrorMessage(error) {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            return "Location permission denied.";
-          case error.POSITION_UNAVAILABLE:
-            return "Location information is unavailable.";
-          case error.TIMEOUT:
-            return "Location request timed out.";
-          default:
-            return "Unknown location error.";
-        }
+      applySortingToFiltered();
+      render(state.filteredItems);
+    }
+
+    function getColorRank(scoreValue) {
+      const score = Number(scoreValue) || 0;
+      if (score < 25) return 1;
+      if (score < 50) return 2;
+      if (score < 75) return 3;
+      return 4;
+    }
+
+    function applySortingToFiltered() {
+      if (state.sortMode === 'name') {
+        state.filteredItems.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      } else if (state.sortMode === 'colour') {
+        state.filteredItems.sort((a, b) => getColorRank(a.score) - getColorRank(b.score) || String(a.name).localeCompare(String(b.name)));
+      }
+    }
+
+    function cycleSortMode() {
+      if (state.sortMode === 'default') {
+        state.sortMode = 'name';
+        sortBtn.innerHTML = '<span class="icon">A↕</span>';
+        sortBtn.title = 'Sorting by name';
+        sortBtn.setAttribute('aria-label', 'Sorting by name');
+      } else if (state.sortMode === 'name') {
+        state.sortMode = 'colour';
+        sortBtn.innerHTML = '<span class="icon">◐</span>';
+        sortBtn.title = 'Sorting by colour';
+        sortBtn.setAttribute('aria-label', 'Sorting by colour');
+      } else {
+        state.sortMode = 'default';
+        sortBtn.innerHTML = '<span class="icon">⇅</span>';
+        sortBtn.title = 'Sort cards';
+        sortBtn.setAttribute('aria-label', 'Sort cards');
       }
 
-      function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const toRad = deg => deg * Math.PI / 180;
+      applySearch();
+    }
 
-        const dLat = toRad(lat2 - lat1);
-        const dLon = toRad(lon2 - lon1);
+    function openSearchModal() {
+      searchModal.classList.remove('hidden');
+      searchModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => searchInput.focus(), 0);
+    }
 
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(toRad(lat1)) *
-          Math.cos(toRad(lat2)) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    function closeSearchModal() {
+      searchModal.classList.add('hidden');
+      searchModal.setAttribute('aria-hidden', 'true');
+    }
 
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-      }
+    function addDragHandlers(card) {
+      card.addEventListener('dragstart', () => {
+        state.draggedId = card.dataset.id;
+        card.classList.add('dragging');
+      });
 
-      async function submitAttendance() {
-        const btn = document.getElementById("submitBtn");
-        const name = document.getElementById("name").value.trim();
-        const store = document.getElementById("store").value;
-        const action = document.getElementById("action").value;
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        state.draggedId = null;
+      });
 
-        if (!name) {
-          showStatus("error", "Please enter your name.");
+      card.addEventListener('dragover', (event) => {
+        event.preventDefault();
+      });
+
+      card.addEventListener('drop', (event) => {
+        event.preventDefault();
+        const targetId = card.dataset.id;
+        if (!state.draggedId || state.draggedId === targetId) return;
+
+        reorderItems(state.draggedId, targetId);
+        applySearch();
+      });
+    }
+
+    function reorderItems(draggedId, targetId) {
+      const draggedIndex = state.items.findIndex((x) => String(x.id) === String(draggedId));
+      const targetIndex = state.items.findIndex((x) => String(x.id) === String(targetId));
+
+      if (draggedIndex === -1 || targetIndex === -1) return;
+      if (state.sortMode !== 'default') return;
+
+      const updated = [...state.items];
+      const [moved] = updated.splice(draggedIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      state.items = updated;
+    }
+
+    function fetchCardsFromServer() {
+      return new Promise((resolve, reject) => {
+        if (!(window.google && google.script && google.script.run)) {
+          reject(new Error('google.script.run is not available. Open this page from the Apps Script web app.'));
           return;
         }
 
-        btn.disabled = true;
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler((error) => {
+            const message = error && error.message ? error.message : String(error);
+            reject(new Error(message));
+          })
+          .getCardsData();
+      });
+    }
 
-        try {
-          showStatus("info", "Getting your location...");
+    function setLoading(isLoading) {
+      loadingOverlay.classList.toggle('hidden', !isLoading);
+      loadingOverlay.setAttribute('aria-hidden', String(!isLoading));
+      syncBtn.disabled = isLoading;
+      sortBtn.disabled = isLoading;
+      floatingSearchBtn.disabled = isLoading;
+    }
 
-          const position = await getCurrentLocation();
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const accuracy = position.coords.accuracy;
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      window.clearTimeout(showToast._timer);
+      showToast._timer = window.setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
 
-          const storeCoords = config.stores[store];
-          if (!storeCoords) {
-            throw new Error("Store coordinates not found.");
-          }
+    async function loadData() {
+      setLoading(true);
 
-          const distance = calculateDistanceMeters(
-            lat,
-            lng,
-            storeCoords.lat,
-            storeCoords.lng
-          );
+      try {
+        const data = await fetchCardsFromServer();
+        const normalized = normalizeData(data);
 
-          if (distance > config.allowedRadiusMeters) {
-            showStatus(
-              "error",
-              `You are too far from the store.\nDetected distance: ${Math.round(distance)}m\nAllowed: ${config.allowedRadiusMeters}m`
-            );
-            btn.disabled = false;
-            return;
-          }
+        state.items = normalized;
+        state.filteredItems = [...normalized];
 
-          const payload = {
-            name: name,
-            action: action,
-            store: store,
-            lat: lat,
-            lng: lng,
-            accuracy: accuracy,
-            distance: Math.round(distance),
-            device: navigator.userAgent
-          };
-
-          showStatus("info", "Submitting attendance...");
-
-          google.script.run
-            .withSuccessHandler(function(result) {
-              if (result && result.success) {
-                showStatus("success", result.message);
-                document.getElementById("name").value = "";
-              } else {
-                showStatus("error", "Submission failed.");
-              }
-              btn.disabled = false;
-            })
-            .withFailureHandler(function(err) {
-              showStatus("error", "Submission failed: " + err.message);
-              btn.disabled = false;
-            })
-            .saveAttendance(payload);
-
-        } catch (err) {
-          showStatus("error", "Unexpected error: " + err.message);
-          btn.disabled = false;
-        }
+        applySortingToFiltered();
+        render(state.filteredItems);
+      } catch (error) {
+        console.error(error);
+        showToast(`Sync failed: ${error.message}`);
+      } finally {
+        setLoading(false);
       }
-    </script>
-  </body>
+    }
+
+    function normalizeData(data) {
+      const list = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+
+      return list.map((item, index) => ({
+        id: item.id ?? `row-${index + 1}`,
+        name: item.name ?? 'Untitled',
+        score: Number(item.score ?? item.weightage ?? 0)
+      }));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    searchBtn.addEventListener('click', () => {
+      applySearch();
+      closeSearchModal();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      state.filteredItems = [...state.items];
+      applySortingToFiltered();
+      render(state.filteredItems);
+      closeSearchModal();
+    });
+
+    searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        applySearch();
+        closeSearchModal();
+      }
+    });
+
+    floatingSearchBtn.addEventListener('click', openSearchModal);
+    closeSearchBtn.addEventListener('click', closeSearchModal);
+    searchBackdrop.addEventListener('click', closeSearchModal);
+    sortBtn.addEventListener('click', cycleSortMode);
+    syncBtn.addEventListener('click', loadData);
+
+    // Demo data so the page is usable immediately.
+    state.items = [
+        { id: 1, name: 'Critical Risk', score: 18 },
+        { id: 2, name: 'Compliance Review', score: 37 },
+        { id: 3, name: 'Customer Onboarding', score: 63 },
+        { id: 4, name: 'Operational Health', score: 88 },
+        { id: 5, name: 'Service Stability', score: 52 },
+        { id: 6, name: 'Stability', score: 45 },
+        { id: 7, name: 'Mine Bug', score: 21 },
+        { id: 8, name: 'Swiss Alps', score: 99 },
+        { id: 9, name: 'Beach Towels', score: 19 },
+        { id: 10, name: 'Apples', score: 49 },
+        { id: 11, name: 'Milk', score: 82 },
+
+        { id: 12, name: 'Data Sync', score: 56 },
+        { id: 13, name: 'API Latency', score: 72 },
+        { id: 14, name: 'Database Load', score: 64 },
+        { id: 15, name: 'UI Responsiveness', score: 77 },
+        { id: 16, name: 'Cache Efficiency', score: 41 },
+        { id: 17, name: 'Error Rate', score: 23 },
+        { id: 18, name: 'Security Audit', score: 91 },
+        { id: 19, name: 'Access Control', score: 68 },
+        { id: 20, name: 'Network Throughput', score: 74 },
+        { id: 21, name: 'Queue Processing', score: 59 },
+        { id: 22, name: 'Event Streaming', score: 66 },
+        { id: 23, name: 'gRPC Calls', score: 53 },
+        { id: 24, name: 'Thread Pool Usage', score: 47 },
+        { id: 25, name: 'Memory Pressure', score: 84 },
+        { id: 26, name: 'Disk IO', score: 61 },
+        { id: 27, name: 'Backup Status', score: 79 },
+        { id: 28, name: 'Deployment Health', score: 86 },
+        { id: 29, name: 'Feature Adoption', score: 58 },
+        { id: 30, name: 'User Retention', score: 73 },
+        { id: 31, name: 'Billing Accuracy', score: 69 },
+        { id: 32, name: 'Notification Delivery', score: 54 },
+        { id: 33, name: 'Search Performance', score: 62 },
+        { id: 34, name: 'Data Integrity', score: 93 },
+        { id: 35, name: 'Failover Readiness', score: 81 },
+        { id: 36, name: 'Latency Spikes', score: 44 }
+        ];
+    state.filteredItems = [...state.items];
+    render(state.filteredItems);
+  </script>
+</body>
 </html>
