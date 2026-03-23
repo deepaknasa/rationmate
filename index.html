@@ -1,466 +1,271 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Score Cards Board</title>
-  <style>
-    :root {
-      --bg: #f5f5f5;
-      --surface: #ffffff;
-      --text: #1f1f1f;
-      --muted: #6b7280;
-      --shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-      --radius: 16px;
-      --black-card: linear-gradient(135deg, #111111, #2b2b2b);
-      --red-card: linear-gradient(135deg, #c62828, #ef5350);
-      --orange-card: linear-gradient(135deg, #ef6c00, #ffb74d);
-      --green-card: linear-gradient(135deg, #2e7d32, #66bb6a);
-      --primary: #1976d2;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    .page {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-
-    .header {
-      background: var(--surface);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      padding: 18px;
-      margin-bottom: 16px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    .title {
-      margin: 0 0 6px;
-      font-size: 1.4rem;
-      font-weight: 700;
-    }
-
-    .subtitle {
-      margin: 0 0 16px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .search-input,
-    .api-input {
-      width: 100%;
-      border: 1px solid #d1d5db;
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 1rem;
-      background: #fff;
-      outline: none;
-    }
-
-    .search-input:focus,
-    .api-input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
-    }
-
-    .btn {
-      border: none;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-      transition: transform 0.15s ease, opacity 0.15s ease;
-      white-space: nowrap;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-secondary {
-      background: #374151;
-      color: white;
-    }
-
-    .config-panel {
-      background: var(--surface);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      padding: 16px;
-      margin-bottom: 16px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-    }
-
-    .status {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    .list {
-      display: grid;
-      gap: 14px;
-      min-height: 180px;
-    }
-
-    .card {
-      border-radius: var(--radius);
-      padding: 16px;
-      color: #fff;
-      box-shadow: var(--shadow);
-      cursor: grab;
-      user-select: none;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-    }
-
-    .card.dragging {
-      opacity: 0.6;
-      transform: scale(0.98);
-      cursor: grabbing;
-    }
-
-    .card-content {
-      min-width: 0;
-    }
-
-    .card-title {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      word-break: break-word;
-    }
-
-    .card-meta {
-      margin: 0;
-      font-size: 0.92rem;
-      opacity: 0.92;
-    }
-
-    .score-badge {
-      min-width: 78px;
-      text-align: center;
-      background: rgba(255, 255, 255, 0.2);
-      padding: 10px 12px;
-      border-radius: 999px;
-      font-weight: 700;
-      backdrop-filter: blur(4px);
-    }
-
-    .card-black { background: var(--black-card); }
-    .card-red { background: var(--red-card); }
-    .card-orange { background: var(--orange-card); }
-    .card-green { background: var(--green-card); }
-
-    .empty-state {
-      background: var(--surface);
-      border-radius: 16px;
-      padding: 28px 16px;
-      text-align: center;
-      color: var(--muted);
-      box-shadow: var(--shadow);
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .chip {
-      font-size: 0.82rem;
-      padding: 8px 10px;
-      border-radius: 999px;
-      color: white;
-      font-weight: 600;
-    }
-
-    .chip.black { background: #212121; }
-    .chip.red { background: #d32f2f; }
-    .chip.orange { background: #f57c00; }
-    .chip.green { background: #388e3c; }
-
-    @media (max-width: 640px) {
-      .page {
-        padding: 12px;
+<html>
+  <head>
+    <base target="_top" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Store Attendance</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f5f7fb;
+        margin: 0;
+        padding: 0;
       }
 
-      .toolbar,
-      .config-panel {
-        grid-template-columns: 1fr;
+      .container {
+        max-width: 500px;
+        margin: 40px auto;
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
       }
 
-      .btn {
+      h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      label {
+        display: block;
+        margin-top: 14px;
+        margin-bottom: 6px;
+        font-weight: bold;
+      }
+
+      input, select, button {
         width: 100%;
+        padding: 12px;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 14px;
       }
 
-      .card {
-        grid-template-columns: 1fr;
+      button {
+        margin-top: 20px;
+        background: #0b57d0;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
       }
 
-      .score-badge {
-        justify-self: start;
+      button:disabled {
+        background: #9aa0a6;
+        cursor: not-allowed;
       }
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-    <section class="header">
-      <h1 class="title">Score Cards Board</h1>
-      <p class="subtitle">Search, load from API, and drag cards to reorder them.</p>
-      <div class="toolbar">
-        <input id="searchInput" class="search-input" type="text" placeholder="Search by name or id" />
-        <button id="searchBtn" class="btn btn-primary">Search</button>
-        <button id="resetBtn" class="btn btn-secondary">Reset</button>
+
+      .status {
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 8px;
+        display: none;
+        white-space: pre-line;
+      }
+
+      .status.info {
+        display: block;
+        background: #e8f0fe;
+        color: #174ea6;
+      }
+
+      .status.success {
+        display: block;
+        background: #e6f4ea;
+        color: #137333;
+      }
+
+      .status.error {
+        display: block;
+        background: #fce8e6;
+        color: #c5221f;
+      }
+
+      .small {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Store Attendance</h2>
+
+      <label for="name">Staff Name</label>
+      <input type="text" id="name" placeholder="Enter your name" />
+
+      <label for="store">Store</label>
+      <select id="store">
+        <option value="Chatswood">Chatswood</option>
+        <option value="Blacktown">Blacktown</option>
+      </select>
+
+      <label for="action">Action</label>
+      <select id="action">
+        <option value="Check In">Check In</option>
+        <option value="Check Out">Check Out</option>
+      </select>
+
+      <button id="submitBtn" onclick="submitAttendance()">Submit Attendance</button>
+
+      <div id="status" class="status"></div>
+
+      <div class="small">
+        Location access must be enabled to submit attendance.
       </div>
-      <div class="legend">
-        <span class="chip black">Black: 0-24</span>
-        <span class="chip red">Red: 25-49</span>
-        <span class="chip orange">Orange: 50-74</span>
-        <span class="chip green">Green: 75+</span>
-      </div>
-    </section>
+    </div>
 
-    <section class="config-panel">
-      <input id="apiUrlInput" class="api-input" type="text" value="https://example.com/api/items" placeholder="Enter API URL" />
-      <button id="loadBtn" class="btn btn-primary">Load Data</button>
-    </section>
+    <script>
+      let config = {
+        allowedRadiusMeters: 200,
+        stores: {}
+      };
 
-    <p id="statusText" class="status">Ready. Set your API URL and tap Load Data.</p>
+      google.script.run
+        .withSuccessHandler(function(result) {
+          config = result;
+        })
+        .withFailureHandler(function(err) {
+          showStatus("error", "Failed to load configuration: " + err.message);
+        })
+        .getConfig();
 
-    <section id="cardList" class="list"></section>
-  </div>
-
-  <script>
-    const state = {
-      items: [],
-      filteredItems: [],
-      draggedId: null,
-    };
-
-    const cardList = document.getElementById('cardList');
-    const searchInput = document.getElementById('searchInput');
-    const searchBtn = document.getElementById('searchBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const loadBtn = document.getElementById('loadBtn');
-    const apiUrlInput = document.getElementById('apiUrlInput');
-    const statusText = document.getElementById('statusText');
-
-    function getCardClass(weightage) {
-      const score = Number(weightage) || 0;
-      if (score < 25) return 'card-black';
-      if (score < 50) return 'card-red';
-      if (score < 75) return 'card-orange';
-      return 'card-green';
-    }
-
-    function render(items) {
-      cardList.innerHTML = '';
-
-      if (!items.length) {
-        cardList.innerHTML = `
-          <div class="empty-state">
-            No cards found.
-          </div>
-        `;
-        return;
+      function showStatus(type, message) {
+        const status = document.getElementById("status");
+        status.className = "status " + type;
+        status.textContent = message;
       }
 
-      items.forEach((item) => {
-        const card = document.createElement('article');
-        card.className = `card ${getCardClass(item.weightage)}`;
-        card.draggable = true;
-        card.dataset.id = item.id;
-
-        card.innerHTML = `
-          <div class="card-content">
-            <h3 class="card-title">${escapeHtml(item.name)}</h3>
-            <p class="card-meta">ID: ${escapeHtml(String(item.id))}</p>
-          </div>
-          <div class="score-badge">${escapeHtml(String(item.weightage))}</div>
-        `;
-
-        addDragHandlers(card);
-        cardList.appendChild(card);
-      });
-    }
-
-    function applySearch() {
-      const term = searchInput.value.trim().toLowerCase();
-
-      if (!term) {
-        state.filteredItems = [...state.items];
-      } else {
-        state.filteredItems = state.items.filter((item) =>
-          String(item.id).toLowerCase().includes(term) ||
-          String(item.name).toLowerCase().includes(term)
-        );
-      }
-
-      render(state.filteredItems);
-      statusText.textContent = `${state.filteredItems.length} item(s) shown.`;
-    }
-
-    function addDragHandlers(card) {
-      card.addEventListener('dragstart', () => {
-        state.draggedId = card.dataset.id;
-        card.classList.add('dragging');
-      });
-
-      card.addEventListener('dragend', () => {
-        card.classList.remove('dragging');
-        state.draggedId = null;
-      });
-
-      card.addEventListener('dragover', (event) => {
-        event.preventDefault();
-      });
-
-      card.addEventListener('drop', (event) => {
-        event.preventDefault();
-        const targetId = card.dataset.id;
-        if (!state.draggedId || state.draggedId === targetId) return;
-
-        reorderItems(state.draggedId, targetId);
-        applySearch();
-      });
-    }
-
-    function reorderItems(draggedId, targetId) {
-      const draggedIndex = state.items.findIndex((x) => String(x.id) === String(draggedId));
-      const targetIndex = state.items.findIndex((x) => String(x.id) === String(targetId));
-
-      if (draggedIndex === -1 || targetIndex === -1) return;
-
-      const updated = [...state.items];
-      const [moved] = updated.splice(draggedIndex, 1);
-      updated.splice(targetIndex, 0, moved);
-      state.items = updated;
-    }
-
-    async function loadData() {
-      const apiUrl = apiUrlInput.value.trim();
-      if (!apiUrl) {
-        statusText.textContent = 'Please enter an API URL.';
-        return;
-      }
-
-      statusText.textContent = 'Loading data...';
-
-      try {
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
+      function getCurrentLocation() {
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Geolocation is not supported by your browser."));
+            return;
           }
-        });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            error => {
+              reject(new Error(getLocationErrorMessage(error)));
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 0
+            }
+          );
+        });
+      }
+
+      function getLocationErrorMessage(error) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            return "Location permission denied.";
+          case error.POSITION_UNAVAILABLE:
+            return "Location information is unavailable.";
+          case error.TIMEOUT:
+            return "Location request timed out.";
+          default:
+            return "Unknown location error.";
+        }
+      }
+
+      function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = deg => deg * Math.PI / 180;
+
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      async function submitAttendance() {
+        const btn = document.getElementById("submitBtn");
+        const name = document.getElementById("name").value.trim();
+        const store = document.getElementById("store").value;
+        const action = document.getElementById("action").value;
+
+        if (!name) {
+          showStatus("error", "Please enter your name.");
+          return;
         }
 
-        const data = await response.json();
-        const normalized = normalizeData(data);
+        btn.disabled = true;
 
-        state.items = normalized;
-        state.filteredItems = [...normalized];
+        try {
+          showStatus("info", "Getting your location...");
 
-        render(state.filteredItems);
-        statusText.textContent = `Loaded ${normalized.length} item(s) from API.`;
-      } catch (error) {
-        console.error(error);
-        statusText.textContent = `Failed to load data: ${error.message}`;
+          const position = await getCurrentLocation();
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const accuracy = position.coords.accuracy;
+
+          const storeCoords = config.stores[store];
+          if (!storeCoords) {
+            throw new Error("Store coordinates not found.");
+          }
+
+          const distance = calculateDistanceMeters(
+            lat,
+            lng,
+            storeCoords.lat,
+            storeCoords.lng
+          );
+
+          if (distance > config.allowedRadiusMeters) {
+            showStatus(
+              "error",
+              `You are too far from the store.\nDetected distance: ${Math.round(distance)}m\nAllowed: ${config.allowedRadiusMeters}m`
+            );
+            btn.disabled = false;
+            return;
+          }
+
+          const payload = {
+            name: name,
+            action: action,
+            store: store,
+            lat: lat,
+            lng: lng,
+            accuracy: accuracy,
+            distance: Math.round(distance),
+            device: navigator.userAgent
+          };
+
+          showStatus("info", "Submitting attendance...");
+
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result && result.success) {
+                showStatus("success", result.message);
+                document.getElementById("name").value = "";
+              } else {
+                showStatus("error", "Submission failed.");
+              }
+              btn.disabled = false;
+            })
+            .withFailureHandler(function(err) {
+              showStatus("error", "Submission failed: " + err.message);
+              btn.disabled = false;
+            })
+            .saveAttendance(payload);
+
+        } catch (err) {
+          showStatus("error", "Unexpected error: " + err.message);
+          btn.disabled = false;
+        }
       }
-    }
-
-    function normalizeData(data) {
-      const list = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
-
-      return list.map((item, index) => ({
-        id: item.id ?? `row-${index + 1}`,
-        name: item.name ?? 'Untitled',
-        weightage: Number(item.weightage ?? 0)
-      }));
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-    }
-
-    searchBtn.addEventListener('click', applySearch);
-    resetBtn.addEventListener('click', () => {
-      searchInput.value = '';
-      state.filteredItems = [...state.items];
-      render(state.filteredItems);
-      statusText.textContent = `${state.filteredItems.length} item(s) shown.`;
-    });
-
-    searchInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        applySearch();
-      }
-    });
-
-    loadBtn.addEventListener('click', loadData);
-
-    // Demo data so the page is usable immediately.
-    state.items = [
-      { id: 1, name: 'Critical Risk', weightage: 18 },
-      { id: 2, name: 'Compliance Review', weightage: 37 },
-      { id: 3, name: 'Customer Onboarding', weightage: 63 },
-      { id: 4, name: 'Operational Health', weightage: 88 },
-      { id: 5, name: 'Service Stability', weightage: 52 }
-    ];
-    state.filteredItems = [...state.items];
-    render(state.filteredItems);
-    statusText.textContent = 'Showing demo data. Replace API URL and click Load Data.';
-  </script>
-</body>
+    </script>
+  </body>
 </html>
