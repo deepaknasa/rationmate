@@ -474,9 +474,6 @@
   </div>
 
   <script>
-    const API_URL = 'https://qtuafuaitxhijkpopjls.supabase.co/functions/v1/ration-mate-items'; // Not used when running inside Apps Script HTML Service
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dWFmdWFpdHhoaWprcG9wamxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODQwNzQsImV4cCI6MjA4OTg2MDA3NH0.eYHK24P2Lm2I2UXrMqX-4sNrP5tUd9JGtRwJ1JbZeW0';
-
     const state = {
       items: [],
       filteredItems: [],
@@ -675,13 +672,8 @@
       setLoading(true);
 
       try {
-        const response = await fetch(API_URL, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        });
 
+        const response = await fetch('/api/ration-items');
         const data = await response.json();
         console.log(data.items);
 
