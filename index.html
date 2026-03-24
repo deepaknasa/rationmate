@@ -19,10 +19,6 @@
       --primary: #1976d2;
     }
 
-    html {
-      font-size: 16px; /* normalize scaling */
-    }
-
     * {
       box-sizing: border-box;
     }
@@ -387,30 +383,6 @@
       gap: 10px;
     }
 
-    .bottom-icons {
-      position: fixed;
-      bottom: 10px;
-      width: 100%;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-
-    .bottom-icons button {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #1976d2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .bottom-icons i {
-      font-size: 28px !important;  /* 🔥 force size */
-      line-height: 1;
-    }
-
     @media (min-width: 641px) {
       .search-modal {
         align-items: center;
@@ -444,8 +416,8 @@
       }
 
       .icon-btn {
-        width: 96px;   /* was 64px → +50% */
-        height: 96px;
+        width: 70px;
+        height: 70px;
       }
 
       .icon-btn .icon {
@@ -455,10 +427,6 @@
       .bottom-bar {
         gap: 20px;
         padding: 0 12px;
-      }
-
-      .material-icons {
-        font-size: 28px !important;
       }
     }
   </style>
@@ -506,7 +474,8 @@
   </div>
 
   <script>
-    const API_URL = ''; // Not used when running inside Apps Script HTML Service
+    const API_URL = 'https://qtuafuaitxhijkpopjls.supabase.co/functions/v1/ration-mate-items'; // Not used when running inside Apps Script HTML Service
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dWFmdWFpdHhoaWprcG9wamxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODQwNzQsImV4cCI6MjA4OTg2MDA3NH0.eYHK24P2Lm2I2UXrMqX-4sNrP5tUd9JGtRwJ1JbZeW0';
 
     const state = {
       items: [],
@@ -706,7 +675,16 @@
       setLoading(true);
 
       try {
-        const data = await fetchCardsFromServer();
+        const response = await fetch(API_URL, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        const data = await response.json();
+        console.log(data.items);
+
         const normalized = normalizeData(data);
 
         state.items = normalized;
