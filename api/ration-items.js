@@ -3,9 +3,9 @@ module.exports = async function handler(req, res) {
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
   try {
-    const url =
-      `${API_URL}` +
-      `?select=id,name,consumption_rate,fill_date`;
+    const url = `${API_URL}/functions/v1/ration-mate-items?select=*`;
+
+    console.log("Fetching data from Supabase with URL:", url);
 
     const response = await fetch(url, {
       method: "GET",
@@ -16,7 +16,11 @@ module.exports = async function handler(req, res) {
       },
     });
 
+    console.log("Received response from Supabase with status:", response.status);
+
     const text = await response.text();
+
+    console.log("Response text:", text);
 
     res.setHeader("Content-Type", "application/json");
     res.status(response.status).send(text);
