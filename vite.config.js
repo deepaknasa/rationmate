@@ -20,6 +20,16 @@ export default defineConfig(({ mode }) => {
             Accept: 'application/json',
           },
         },
+        '/api/update-ration-item': {
+          target: supabaseUrl,
+          changeOrigin: true,
+          rewrite: () => '/functions/v1/update-ration-item',
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            Accept: 'application/json',
+          },
+        },
         '/functions': {
           target: supabaseUrl,
           changeOrigin: true,

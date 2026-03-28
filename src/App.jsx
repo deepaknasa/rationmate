@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+const DEMO_RETRY_SECONDS = 45;
 const demoItems = [
   { id: 1, name: 'Critical Risk', score: 18 },
   { id: 2, name: 'Compliance Review', score: 37 },
@@ -47,12 +48,13 @@ function getCardClass(scoreValue) {
   return 'card-green';
 }
 
-function getColorRank(scoreValue) {
-  const score = Number(scoreValue) || 0;
-  if (score < 25) return 1;
-  if (score < 50) return 2;
-  if (score < 75) return 3;
-  return 4;
+function getDisplayScore(item) {
+  return item.savedFillPercentage ?? item.score;
+}
+
+function hasDirtyScore(item) {
+  return item.savedFillPercentage !== null
+    && Number(item.savedFillPercentage) !== Number(item.score);
 }
 
 function normalizeData(data) {
@@ -62,7 +64,7 @@ function normalizeData(data) {
     id: item.id ?? `row-${index + 1}`,
     name: item.name ?? 'Untitled',
     score: Number(item.score ?? item.weightage ?? 0),
-    savedFillPercentage: item.savedFillPercentage ?? null,
+    savedFillPercentage: item.savedFillPercentage == null ? null : Number(item.savedFillPercentage),
   }));
 }
 
@@ -76,14 +78,13 @@ function getTodayDateString() {
 
 
 function SortIcon({ sortMode }) {
-  const icon = sortMode === 'name'
-    ? 'A-Z'
-    : sortMode === 'colour'
-      ? '\u25CF'
-      : '\u21C5';
+  const icon = sortMode === 'score-asc'
+    ? '\u2191'
+    : '\u2193';
 
   return <span className="icon" aria-hidden="true">{icon}</span>;
 }
+
 
 function ActionButton({ label, title, icon, onClick, primary = false, disabled = false, children }) {
   return (
@@ -164,12 +165,62 @@ function SearchModal({
   );
 }
 
+function MenuOverlay({ isOpen, onClose, onSync, onAddItem, isLoading }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="menu-modal" aria-hidden="false">
+      <div className="menu-backdrop" onClick={onClose} />
+      <div className="menu-sheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+        <div className="menu-sheet-header">
+          <h2 id="menuTitle" className="menu-sheet-title">Menu</h2>
+          <ActionButton
+            label="Close menu"
+            title="Close menu"
+            icon={'\u2715'}
+            onClick={onClose}
+          />
+        </div>
+        <div className="menu-actions">
+          <button type="button" className="btn btn-primary" onClick={onSync} disabled={isLoading}>Sync</button>
+          <button type="button" className="btn btn-secondary" onClick={onAddItem}>Add item</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function TopPlaceholderBar() {
+  return (
+    <header className="top-placeholder" aria-label="Company placeholder">
+      <div className="top-placeholder-logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64" className="top-placeholder-logo-svg">
+          <rect x="14" y="24" width="36" height="24" rx="8" fill="currentColor" opacity="0.18" />
+          <path d="M20 28h24l-3 16H23L20 28Z" fill="currentColor" />
+          <path d="M24 24c0-4 3-7 8-7s8 3 8 7" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <path d="M36 14c3 0 6-3 6-6-3 0-6 3-6 6Z" fill="currentColor" />
+        </svg>
+      </div>
+    </header>
+  );
+}
 function CardRow({
   item,
   canDrag,
   onDragStart,
   onDropOn,
-  onSlideStarted,
   onSlideLeft,
   onSlideRight,
 }) {
@@ -222,7 +273,6 @@ function CardRow({
     if (slideRef.current.axis !== 'x') return;
 
     event.preventDefault?.();
-    onSlideStarted();
 
     const { leftLimit, rightLimit } = getSlideBounds();
     const capped = Math.max(-leftLimit, Math.min(rightLimit, dx));
@@ -345,15 +395,18 @@ function CardRow({
 }
 
 export default function App() {
-  const [items, setItems] = useState(demoItems);
+  const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDraft, setSearchDraft] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [sortMode, setSortMode] = useState('default');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [sortMode, setSortMode] = useState('score-asc');
   const [draggedId, setDraggedId] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasPendingSlides, setHasPendingSlides] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUsingDemoData, setIsUsingDemoData] = useState(false);
+  const [retryCountdown, setRetryCountdown] = useState(DEMO_RETRY_SECONDS);
+  const [retryCycle, setRetryCycle] = useState(0);
 
   useEffect(() => {
     if (!toastMessage) return undefined;
@@ -361,27 +414,52 @@ export default function App() {
     return () => window.clearTimeout(timeoutId);
   }, [toastMessage]);
 
+  useEffect(() => {
+    loadData({ source: 'initial', useDemoFallback: true, showSuccessToast: false });
+  }, []);
+
+  useEffect(() => {
+    if (!isUsingDemoData) return undefined;
+
+    setRetryCountdown(DEMO_RETRY_SECONDS);
+    const startedAt = Date.now();
+
+    const intervalId = window.setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      setRetryCountdown(Math.max(0, DEMO_RETRY_SECONDS - elapsedSeconds));
+    }, 1000);
+
+    const timeoutId = window.setTimeout(() => {
+      loadData({ source: 'retry', useDemoFallback: true, showSuccessToast: false });
+    }, DEMO_RETRY_SECONDS * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [isUsingDemoData, retryCycle]);
+
+  const hasPendingChanges = items.some(hasDirtyScore);
   const filteredItems = items.filter((item) => {
     const term = searchQuery.trim().toLowerCase();
     if (!term) return true;
     return String(item.id).toLowerCase().includes(term) || String(item.name).toLowerCase().includes(term);
   });
 
-  if (sortMode === 'name') {
-    filteredItems.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-  } else if (sortMode === 'colour') {
+  if (sortMode === 'score-asc') {
     filteredItems.sort((a, b) => (
-      getColorRank(a.score) - getColorRank(b.score)
+      getDisplayScore(a) - getDisplayScore(b)
+      || String(a.name).localeCompare(String(b.name))
+    ));
+  } else if (sortMode === 'score-desc') {
+    filteredItems.sort((a, b) => (
+      getDisplayScore(b) - getDisplayScore(a)
       || String(a.name).localeCompare(String(b.name))
     ));
   }
 
   function cycleSortMode() {
-    setSortMode((current) => {
-      if (current === 'default') return 'name';
-      if (current === 'name') return 'colour';
-      return 'default';
-    });
+    setSortMode((current) => (current === 'score-asc' ? 'score-desc' : 'score-asc'));
   }
 
   function openSearchModal() {
@@ -391,6 +469,14 @@ export default function App() {
 
   function closeSearchModal() {
     setIsSearchOpen(false);
+  }
+
+  function openMenu() {
+    setIsMenuOpen(true);
+  }
+
+  function closeMenu() {
+    setIsMenuOpen(false);
   }
 
   function applySearch() {
@@ -404,12 +490,8 @@ export default function App() {
     setIsSearchOpen(false);
   }
 
-  function markSlidesPending() {
-    setHasPendingSlides(true);
-  }
-
   function reorderItems(targetId) {
-    if (!draggedId || draggedId === targetId || sortMode !== 'default') return;
+    if (!draggedId || draggedId === targetId) return;
 
     setItems((current) => {
       const draggedIndex = current.findIndex((item) => String(item.id) === String(draggedId));
@@ -425,28 +507,57 @@ export default function App() {
     setDraggedId(null);
   }
 
-  async function loadData() {
-    setIsLoading(true);
+  async function loadData({
+    source = 'manual',
+    useDemoFallback = false,
+    showSuccessToast = true,
+  } = {}) {
+    const showLoader = source !== 'retry';
+    if (showLoader) {
+      setIsLoading(true);
+    }
 
     try {
       const response = await fetch('/api/ration-items');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Request failed with status ${response.status}`);
+      }
+
       const data = await response.json();
       const normalized = normalizeData(data);
 
       setItems(normalized);
-      setHasPendingSlides(false);
-      setToastMessage('Cards synced');
+      setIsUsingDemoData(false);
+      setRetryCountdown(DEMO_RETRY_SECONDS);
+
+      if (showSuccessToast) {
+        setToastMessage(source === 'manual' ? 'Cards synced' : 'Server data loaded');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setToastMessage(`Sync failed: ${message}`);
+
+      if (useDemoFallback) {
+        setItems((current) => (current.length ? current : demoItems));
+        setIsUsingDemoData(true);
+        setRetryCycle((current) => current + 1);
+
+        if (source === 'manual') {
+          setToastMessage(`Sync failed: ${message}`);
+        }
+      } else {
+        setToastMessage(`Sync failed: ${message}`);
+      }
     } finally {
-      setIsLoading(false);
+      if (showLoader) {
+        setIsLoading(false);
+      }
     }
   }
 
   async function saveItems() {
     const dirtyItems = items
-      .filter((item) => item.savedFillPercentage !== null)
+      .filter(hasDirtyScore)
       .map((item) => ({
         id: item.id,
         score: item.savedFillPercentage,
@@ -454,7 +565,6 @@ export default function App() {
       }));
 
     if (!dirtyItems.length) {
-      setHasPendingSlides(false);
       setToastMessage('No items to save');
       return;
     }
@@ -462,7 +572,7 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/functions/v1/update-ration-item', {
+      const response = await fetch('/api/update-ration-item', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -481,8 +591,7 @@ export default function App() {
           ? { ...item, score: item.savedFillPercentage, savedFillPercentage: null }
           : item
       )));
-      setHasPendingSlides(false);
-      setToastMessage('Items are saved');
+      setToastMessage('Scores saved');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setToastMessage(`Save failed: ${message}`);
@@ -491,38 +600,56 @@ export default function App() {
     }
   }
 
-  function handleMiddleAction() {
-    if (hasPendingSlides) {
-      saveItems();
-      return;
-    }
-
-    loadData();
+  function handleSyncAction() {
+    closeMenu();
+    loadData({ source: 'manual', useDemoFallback: true, showSuccessToast: true });
   }
 
-  const middleLabel = hasPendingSlides ? 'Save cards' : 'Sync cards';
-  const middleTitle = hasPendingSlides ? 'Save cards' : 'Sync cards';
-  const middleIcon = hasPendingSlides ? '\uD83D\uDCBE' : '\u27F3';
+  function handleAddItemAction() {
+    closeMenu();
+    setToastMessage('Add item is not implemented yet');
+  }
+
+  function cancelPendingChanges() {
+    setItems((current) => current.map((item) => (
+      item.savedFillPercentage !== null
+        ? { ...item, savedFillPercentage: null }
+        : item
+    )));
+    setToastMessage('Changes canceled');
+  }
 
   return (
     <>
       <div className="page">
-        <section id="cardList" className="list">
+        <TopPlaceholderBar />
+
+        {isUsingDemoData && (
+          <div className="demo-ribbon" role="status" aria-live="polite">
+            <span className="demo-ribbon-label">Demo data</span>
+            <span>
+              {retryCountdown > 0
+                ? `Retrying server in ${retryCountdown}s`
+                : 'Retrying server now...'}
+            </span>
+          </div>
+        )}
+
+        <section id="cardList" className={`list${isUsingDemoData ? ' list-with-ribbon' : ''}`}>
           {filteredItems.length ? filteredItems.map((item) => (
             <CardRow
               key={item.id}
               item={item}
-              canDrag={sortMode === 'default'}
+              canDrag={false}
               onDragStart={setDraggedId}
               onDropOn={reorderItems}
-              onSlideStarted={markSlidesPending}
               onSlideLeft={(fillPercentage) => {
                 setItems((current) => current.map((entry) => (
                   String(entry.id) === String(item.id)
                     ? { ...entry, savedFillPercentage: fillPercentage }
                     : entry
                 )));
-                setToastMessage(`Left fill ${fillPercentage}%`);
+                setToastMessage(`Score set to ${fillPercentage}%`);
               }}
               onSlideRight={() => setToastMessage('Slid right')}
             />
@@ -533,26 +660,28 @@ export default function App() {
 
         <div className="bottom-bar">
           <ActionButton
-            label={sortMode === 'default' ? 'Sort cards' : sortMode === 'name' ? 'Sorting by name' : 'Sorting by colour'}
-            title={sortMode === 'default' ? 'Sort cards' : sortMode === 'name' ? 'Sorting by name' : 'Sorting by colour'}
-            onClick={cycleSortMode}
-            disabled={isLoading}
-          >
-            <SortIcon sortMode={sortMode} />
-          </ActionButton>
-          <ActionButton
-            label={middleLabel}
-            title={middleTitle}
-            icon={middleIcon}
-            onClick={handleMiddleAction}
-            primary
+            label="Open menu"
+            title="Menu"
+            icon={'\u2630'}
+            onClick={openMenu}
             disabled={isLoading}
           />
           <ActionButton
-            label="Open search"
-            title="Search"
-            icon={'\uD83D\uDD0D'}
-            onClick={openSearchModal}
+            label={hasPendingChanges ? 'Cancel pending score changes' : (sortMode === 'score-desc' ? 'Sorting by score descending' : 'Sorting by score ascending')}
+            title={hasPendingChanges ? 'Cancel pending score changes' : (sortMode === 'score-desc' ? 'Sorting by score descending' : 'Sorting by score ascending')}
+            onClick={hasPendingChanges ? cancelPendingChanges : cycleSortMode}
+            primary
+            disabled={isLoading}
+          >
+            {hasPendingChanges
+              ? <span className="icon" aria-hidden="true">{'\u2715'}</span>
+              : <SortIcon sortMode={sortMode} />}
+          </ActionButton>
+          <ActionButton
+            label={hasPendingChanges ? 'Save pending score changes' : 'Open search'}
+            title={hasPendingChanges ? 'Save pending score changes' : 'Search'}
+            icon={hasPendingChanges ? '\u2713' : '\uD83D\uDD0D'}
+            onClick={hasPendingChanges ? saveItems : openSearchModal}
             primary
             disabled={isLoading}
           />
@@ -569,6 +698,14 @@ export default function App() {
         <div className="toast" role="status" aria-live="polite">{toastMessage}</div>
       )}
 
+      <MenuOverlay
+        isOpen={isMenuOpen}
+        onClose={closeMenu}
+        onSync={handleSyncAction}
+        onAddItem={handleAddItemAction}
+        isLoading={isLoading}
+      />
+
       <SearchModal
         isOpen={isSearchOpen}
         searchDraft={searchDraft}
@@ -580,6 +717,11 @@ export default function App() {
     </>
   );
 }
+
+
+
+
+
 
 
 
