@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import RationBoard from '../components/RationBoard';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -18,12 +19,12 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="dashboard-page">
-      <section className="dashboard-card">
-        <h1>Dashboard</h1>
-        <p>Logged in as: <strong>{user?.email}</strong></p>
+    <>
+      <header className="auth-toolbar">
+        <p className="auth-toolbar-email">Logged in as: <strong>{user?.email}</strong></p>
         <button type="button" onClick={handleLogout}>Logout</button>
-      </section>
-    </main>
+      </header>
+      <RationBoard />
+    </>
   );
 }
