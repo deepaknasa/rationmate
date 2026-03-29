@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    define: {
+      'import.meta.env.VITE_SUPABASE_URL': supabaseUrl == null ? 'undefined' : JSON.stringify(supabaseUrl),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': supabaseAnonKey == null ? 'undefined' : JSON.stringify(supabaseAnonKey),
+    },
     server: {
       proxy: supabaseUrl ? {
         '/api/ration-items': {

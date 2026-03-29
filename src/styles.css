@@ -2,6 +2,7 @@
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   color: #111827;
   background: #f3f4f6;
+  color-scheme: light;
 }
 
 * {
@@ -31,6 +32,7 @@ body {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
   display: grid;
   gap: 12px;
+  position: relative;
 }
 
 .auth-card h1,
@@ -42,6 +44,79 @@ body {
 .dashboard-card p {
   margin: 0;
   color: #4b5563;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb !important;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-toggle {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.15rem;
+}
+
+.burger-menu {
+  position: absolute;
+  top: 74px;
+  right: 24px;
+  width: min(280px, calc(100% - 48px));
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
+  display: grid;
+  gap: 10px;
+}
+
+.burger-menu-profile {
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.burger-menu-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #93c5fd !important;
+}
+
+.burger-menu-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff !important;
+}
+
+.burger-menu-email {
+  font-size: 0.92rem;
+  color: #cbd5e1 !important;
+  word-break: break-word;
+}
+
+.burger-menu-item {
+  width: 100%;
+  text-align: left;
+  background: #1e293b;
+}
+
+.burger-menu-item-danger {
+  background: #b91c1c;
 }
 
 label {
@@ -92,4 +167,20 @@ button:disabled {
 .user-email {
   font-weight: 700;
   color: #111827 !important;
+}
+
+@media (max-width: 640px) {
+  .dashboard-header {
+    align-items: center;
+  }
+
+  .burger-menu {
+    top: 88px;
+    right: 16px;
+    width: calc(100% - 32px);
+  }
+
+  .auth-actions {
+    grid-template-columns: 1fr;
+  }
 }

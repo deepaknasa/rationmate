@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { hasCompletedSetup } from '../lib/userProfile';
 
 export default function AuthPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +17,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard', { replace: true });
+      navigate(hasCompletedSetup(user) ? '/cards' : '/setup', { replace: true });
     }
   }, [user, navigate]);
 
@@ -30,14 +32,23 @@ export default function AuthPage() {
       return;
     }
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName.trim(),
+          setup_complete: false,
+        },
+      },
+    });
 
     if (signUpError) {
       setError(signUpError.message);
     } else if (data.user && !data.session) {
       setMessage('Signup successful. Please check your email to confirm your account.');
     } else {
-      navigate('/dashboard', { replace: true });
+      navigate('/setup', { replace: true });
     }
 
     setLoading(false);
@@ -54,12 +65,12 @@ export default function AuthPage() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {
       setError(signInError.message);
     } else {
-      navigate('/dashboard', { replace: true });
+      navigate(hasCompletedSetup(data.user) ? '/cards' : '/setup', { replace: true });
     }
 
     setLoading(false);
@@ -70,6 +81,15 @@ export default function AuthPage() {
       <section className="auth-card">
         <h1>RationMate Auth</h1>
         <p>Sign up or log in with your email and password.</p>
+
+        <label htmlFor="fullName">Customer name</label>
+        <input
+          id="fullName"
+          type="text"
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          placeholder="Jane Customer"
+        />
 
         <label htmlFor="email">Email</label>
         <input
@@ -90,7 +110,7 @@ export default function AuthPage() {
         />
 
         <div className="auth-actions">
-          <button type="button" onClick={handleSignUp} disabled={loading || !email || !password}>
+          <button type="button" onClick={handleSignUp} disabled={loading || !fullName.trim() || !email || !password}>
             {loading ? 'Please wait...' : 'Sign Up'}
           </button>
           <button type="button" onClick={handleSignIn} disabled={loading || !email || !password}>
