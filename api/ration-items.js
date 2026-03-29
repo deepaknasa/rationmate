@@ -1,6 +1,6 @@
 module.exports = async function handler(req, res) {
-    const API_URL = process.env.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+    const API_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
 
   try {
     const url = `${API_URL}/functions/v1/ration-mate-items?select=*`;
