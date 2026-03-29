@@ -24,6 +24,12 @@ export default function AuthPage() {
     setError('');
     setMessage('');
 
+    if (!supabase) {
+      setError('App configuration is missing. Please contact support.');
+      setLoading(false);
+      return;
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
 
     if (signUpError) {
@@ -41,6 +47,12 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     setMessage('');
+
+    if (!supabase) {
+      setError('App configuration is missing. Please contact support.');
+      setLoading(false);
+      return;
+    }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 

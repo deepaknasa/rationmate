@@ -14,6 +14,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
 
+    if (!supabase) {
+      setLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     async function loadSession() {
       const { data, error } = await supabase.auth.getSession();
 

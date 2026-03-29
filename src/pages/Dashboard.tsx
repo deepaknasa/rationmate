@@ -7,6 +7,11 @@ export default function Dashboard() {
   const { user } = useAuth();
 
   async function handleLogout() {
+    if (!supabase) {
+      console.error('Supabase client is not configured.');
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
 
     if (error) {
