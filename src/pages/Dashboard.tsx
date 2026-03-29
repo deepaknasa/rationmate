@@ -32,7 +32,16 @@ export default function Dashboard() {
         const response = await fetch('/api/ration-items');
 
         if (!response.ok) {
-          throw new Error('Failed to load ration items.');
+          let message = 'Failed to load ration items.';
+
+          try {
+            const errorPayload = (await response.json()) as { error?: string; message?: string };
+            message = errorPayload.error ?? errorPayload.message ?? message;
+          } catch {
+            // Ignore JSON parse issues and keep fallback message.
+          }
+
+          throw new Error(message);
         }
 
         const data = (await response.json()) as RationItem[];
