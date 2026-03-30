@@ -15,7 +15,6 @@ body {
 }
 
 .auth-page,
-.dashboard-page,
 .auth-status {
   min-height: 100vh;
   display: grid;
@@ -23,8 +22,12 @@ body {
   padding: 16px;
 }
 
-.auth-card,
-.dashboard-card {
+.dashboard-page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.auth-card {
   width: min(100%, 420px);
   background: #ffffff;
   border-radius: 16px;
@@ -36,12 +39,12 @@ body {
 }
 
 .auth-card h1,
-.dashboard-card h1 {
+.dashboard-shell h1 {
   margin: 0;
 }
 
 .auth-card p,
-.dashboard-card p {
+.dashboard-shell p {
   margin: 0;
   color: #4b5563;
 }
@@ -61,8 +64,14 @@ body {
   gap: 12px;
 }
 
-.dashboard-card-shell {
-  padding-bottom: 92px;
+.dashboard-shell {
+  min-height: 100vh;
+  width: 100%;
+  padding: 24px 16px 92px;
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 12px;
 }
 
 .dashboard-sort-label {
@@ -74,7 +83,7 @@ body {
 }
 
 .card-list {
-  max-height: 360px;
+  min-height: 0;
   overflow-y: auto;
 }
 

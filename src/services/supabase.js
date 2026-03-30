@@ -18,6 +18,25 @@ async function getErrorMessage(response, fallbackMessage) {
   }
 }
 
+function extractRationItems(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+
+  return [];
+}
 export async function fetchRationItems() {
   const response = await fetch(API_ROUTES.rationItems);
 
@@ -26,7 +45,7 @@ export async function fetchRationItems() {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  return extractRationItems(data);
 }
 
 export async function signUpWithEmail({ email, password, fullName }) {
@@ -99,5 +118,6 @@ export function subscribeToAuthChanges(callback) {
 }
 
 export { missingSupabaseConfig };
+
 
 

@@ -95,15 +95,7 @@ export default function Dashboard() {
 
   return (
     <main className="dashboard-page">
-      <section className="dashboard-card dashboard-card-shell">
-        <div className="dashboard-header">
-          <div>
-            <p className="eyebrow">RationMate</p>
-            <h1>Ration List</h1>
-          </div>
-          <p className="dashboard-sort-label">{sortDirection === 'asc' ? 'A to Z' : 'Z to A'}</p>
-        </div>
-
+      <section className="dashboard-shell">
         <div className="card-list" aria-live="polite">
           {loadingItems && <p>Loading ration items...</p>}
           {!loadingItems && itemsError && <p className="auth-error">{itemsError}</p>}
@@ -164,4 +156,3 @@ export default function Dashboard() {
     </main>
   );
 }
-
