@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { getUserDisplayName, hasCompletedSetup } from '../lib/userProfile';
+import { updateCurrentUserProfile } from '../services/supabase';
 
 export default function SetupPage() {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ export default function SetupPage() {
       return;
     }
 
-    if (!supabase || !user) {
+    if (!user) {
       setError('App configuration is missing. Please contact support.');
       return;
     }
@@ -40,16 +40,14 @@ export default function SetupPage() {
     setLoading(true);
     setError('');
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: {
+    try {
+      await updateCurrentUserProfile({
         ...user.user_metadata,
         full_name: trimmedName,
         setup_complete: true,
-      },
-    });
-
-    if (updateError) {
-      setError(updateError.message);
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to complete setup.');
       setLoading(false);
       return;
     }

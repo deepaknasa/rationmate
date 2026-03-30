@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { hasCompletedSetup } from '../lib/userProfile';
+import { signInWithEmail, signUpWithEmail } from '../services/supabase';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -26,29 +26,16 @@ export default function AuthPage() {
     setError('');
     setMessage('');
 
-    if (!supabase) {
-      setError('App configuration is missing. Please contact support.');
-      setLoading(false);
-      return;
-    }
+    try {
+      const data = await signUpWithEmail({ email, password, fullName });
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
-          setup_complete: false,
-        },
-      },
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
-    } else if (data.user && !data.session) {
-      setMessage('Signup successful. Please check your email to confirm your account.');
-    } else {
-      navigate('/setup', { replace: true });
+      if (data.user && !data.session) {
+        setMessage('Signup successful. Please check your email to confirm your account.');
+      } else {
+        navigate('/setup', { replace: true });
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to sign up.');
     }
 
     setLoading(false);
@@ -59,18 +46,11 @@ export default function AuthPage() {
     setError('');
     setMessage('');
 
-    if (!supabase) {
-      setError('App configuration is missing. Please contact support.');
-      setLoading(false);
-      return;
-    }
-
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (signInError) {
-      setError(signInError.message);
-    } else {
+    try {
+      const data = await signInWithEmail({ email, password });
       navigate(hasCompletedSetup(data.user) ? '/cards' : '/setup', { replace: true });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to sign in.');
     }
 
     setLoading(false);

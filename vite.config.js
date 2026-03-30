@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { API_ROUTES, SUPABASE_API_TARGETS } from './src/routes/apiRoutes';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -14,20 +15,20 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: supabaseUrl ? {
-        '/api/ration-items': {
+        [API_ROUTES.rationItems]: {
           target: supabaseUrl,
           changeOrigin: true,
-          rewrite: () => '/functions/v1/ration-mate-items?select=*',
+          rewrite: () => SUPABASE_API_TARGETS.rationItems,
           headers: {
             apikey: supabaseAnonKey,
             Authorization: `Bearer ${supabaseAnonKey}`,
             Accept: 'application/json',
           },
         },
-        '/api/update-ration-item': {
+        [API_ROUTES.updateRationItem]: {
           target: supabaseUrl,
           changeOrigin: true,
-          rewrite: () => '/functions/v1/update-ration-item',
+          rewrite: () => SUPABASE_API_TARGETS.updateRationItem,
           headers: {
             apikey: supabaseAnonKey,
             Authorization: `Bearer ${supabaseAnonKey}`,
@@ -47,3 +48,4 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
+

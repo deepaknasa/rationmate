@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { getUserDisplayName } from '../lib/userProfile';
+import { fetchRationItems, signOutUser } from '../services/supabase';
 
 type RationItem = {
   id?: string | number;
@@ -12,98 +12,105 @@ type RationItem = {
   unit?: string;
 };
 
+type SortDirection = 'asc' | 'desc';
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16" />
+      <path d="M7 12h13" />
+      <path d="M10 17h10" />
+    </svg>
+  );
+}
+
+function SortIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 6v12" />
+      <path d="M5 9l3-3 3 3" />
+      <path d="M16 18V6" />
+      <path d="M13 15l3 3 3-3" />
+    </svg>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [items, setItems] = useState<RationItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [itemsError, setItemsError] = useState('');
   const displayName = getUserDisplayName(user);
 
   useEffect(() => {
-    let isMounted = true;
+    let isActive = true;
 
-    async function loadItems() {
-      setLoadingItems(true);
-      setItemsError('');
-
-      try {
-        const response = await fetch('/api/ration-items');
-
-        if (!response.ok) {
-          let message = 'Failed to load ration items.';
-
-          try {
-            const errorPayload = (await response.json()) as { error?: string; message?: string };
-            message = errorPayload.error ?? errorPayload.message ?? message;
-          } catch {
-            // Ignore JSON parse issues and keep fallback message.
-          }
-
-          throw new Error(message);
-        }
-
-        const data = (await response.json()) as RationItem[];
-
-        if (!isMounted) {
+    void fetchRationItems()
+      .then((data) => {
+        if (!isActive) {
           return;
         }
 
         setItems(Array.isArray(data) ? data : []);
-      } catch (error) {
-        if (!isMounted) {
+      })
+      .catch((error) => {
+        if (!isActive) {
           return;
         }
 
         setItemsError(error instanceof Error ? error.message : 'Unable to load ration items.');
-      } finally {
-        if (isMounted) {
+      })
+      .finally(() => {
+        if (isActive) {
           setLoadingItems(false);
         }
-      }
-    }
-
-    void loadItems();
+      });
 
     return () => {
-      isMounted = false;
+      isActive = false;
     };
   }, []);
 
   async function handleLogout() {
-    if (!supabase) {
-      console.error('Supabase client is not configured.');
-      return;
-    }
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error('Logout failed:', error.message);
+    try {
+      await signOutUser();
+    } catch (error) {
+      console.error('Logout failed:', error instanceof Error ? error.message : error);
       return;
     }
 
     navigate('/auth', { replace: true });
   }
 
+  const sortedItems = [...items].sort((leftItem, rightItem) => {
+    const leftLabel = leftItem.item_name ?? leftItem.name ?? '';
+    const rightLabel = rightItem.item_name ?? rightItem.name ?? '';
+    const comparison = leftLabel.localeCompare(rightLabel);
+
+    return sortDirection === 'asc' ? comparison : comparison * -1;
+  });
+
   return (
     <main className="dashboard-page">
-      <section className="dashboard-card">
+      <section className="dashboard-card dashboard-card-shell">
         <div className="dashboard-header">
           <div>
-            <p className="eyebrow">Welcome back</p>
-            <h1>Card List</h1>
+            <p className="eyebrow">RationMate</p>
+            <h1>Ration List</h1>
           </div>
+          <p className="dashboard-sort-label">{sortDirection === 'asc' ? 'A to Z' : 'Z to A'}</p>
         </div>
 
         <div className="card-list" aria-live="polite">
           {loadingItems && <p>Loading ration items...</p>}
           {!loadingItems && itemsError && <p className="auth-error">{itemsError}</p>}
           {!loadingItems && !itemsError && items.length === 0 && <p>No ration items found.</p>}
-          {!loadingItems && !itemsError && items.length > 0 && (
+          {!loadingItems && !itemsError && sortedItems.length > 0 && (
             <ul className="card-list-items">
-              {items.map((item, index) => {
+              {sortedItems.map((item, index) => {
                 const itemLabel = item.item_name ?? item.name ?? `Item ${index + 1}`;
                 const quantityLabel = item.quantity ? `Qty: ${item.quantity}${item.unit ? ` ${item.unit}` : ''}` : 'Qty not set';
                 const itemKey = item.id ?? `${itemLabel}-${index}`;
@@ -122,12 +129,22 @@ export default function Dashboard() {
         <div className="dashboard-actions">
           <button
             type="button"
-            className="menu-toggle"
+            className="dashboard-action-button"
+            onClick={() => setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))}
+            aria-label={`Sort ration items ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+            title={sortDirection === 'asc' ? 'Sort Z to A' : 'Sort A to Z'}
+          >
+            <SortIcon />
+          </button>
+          <div className="dashboard-actions-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="dashboard-action-button"
             onClick={() => setIsMenuOpen((current) => !current)}
             aria-expanded={isMenuOpen}
             aria-label="Open account menu"
           >
-            ☰
+            <MenuIcon />
           </button>
         </div>
 
@@ -147,3 +164,4 @@ export default function Dashboard() {
     </main>
   );
 }
+

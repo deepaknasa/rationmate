@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { getCurrentSession, missingSupabaseConfig, subscribeToAuthChanges } from '../services/supabase';
 
 const AuthContext = createContext({
   user: null,
@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
 
-    if (!supabase) {
+    if (missingSupabaseConfig) {
       setLoading(false);
       return () => {
         isMounted = false;
@@ -22,25 +22,30 @@ export function AuthProvider({ children }) {
     }
 
     async function loadSession() {
-      const { data, error } = await supabase.auth.getSession();
+      try {
+        const currentSession = await getCurrentSession();
 
-      if (!isMounted) {
-        return;
+        if (!isMounted) {
+          return;
+        }
+
+        setSession(currentSession);
+        setLoading(false);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error('Error getting session:', error instanceof Error ? error.message : error);
+        setLoading(false);
       }
-
-      if (error) {
-        console.error('Error getting session:', error.message);
-      }
-
-      setSession(data.session ?? null);
-      setLoading(false);
     }
 
     loadSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = subscribeToAuthChanges((_event, nextSession) => {
       setSession(nextSession ?? null);
       setLoading(false);
     });
