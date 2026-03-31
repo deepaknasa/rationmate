@@ -48,6 +48,26 @@ export async function fetchRationItems() {
   return extractRationItems(data);
 }
 
+export async function updateRationItems(payload) {
+  const response = await fetch(API_ROUTES.updateRationItem, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to update ration items.'));
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function signUpWithEmail({ email, password, fullName }) {
   const client = getSupabaseClient();
   const { data, error } = await client.auth.signUp({
