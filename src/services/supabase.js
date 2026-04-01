@@ -37,8 +37,31 @@ function extractRationItems(payload) {
 
   return [];
 }
+
+const REQUEST_TIMEOUT_MS = 12000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function fetchRationItems() {
-  const response = await fetch(API_ROUTES.rationItems);
+  const response = await fetchWithTimeout(API_ROUTES.rationItems);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, 'Failed to load ration items.'));
@@ -49,7 +72,7 @@ export async function fetchRationItems() {
 }
 
 export async function updateRationItems(payload) {
-  const response = await fetch(API_ROUTES.updateRationItem, {
+  const response = await fetchWithTimeout(API_ROUTES.updateRationItem, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -138,6 +161,5 @@ export function subscribeToAuthChanges(callback) {
 }
 
 export { missingSupabaseConfig };
-
 
 
