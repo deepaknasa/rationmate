@@ -2,8 +2,8 @@ module.exports = async function handler(req, res) {
   const API_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
 
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
+  if (!['GET', 'POST'].includes(req.method)) {
+    res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -14,15 +14,29 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const url = `${API_URL}/rest/v1/ration-mate-items?select=*`;
+    const isCreateRequest = req.method === 'POST';
+    const url = isCreateRequest
+      ? `${API_URL}/rest/v1/ration-mate-items`
+      : `${API_URL}/rest/v1/ration-mate-items?select=*`;
+
+    const body = typeof req.body === 'string'
+      ? req.body
+      : JSON.stringify(req.body ?? {});
 
     const response = await fetch(url, {
-      method: 'GET',
+      method: req.method,
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         Accept: 'application/json',
+        ...(isCreateRequest
+          ? {
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation',
+            }
+          : {}),
       },
+      ...(isCreateRequest ? { body } : {}),
     });
 
     const text = await response.text();

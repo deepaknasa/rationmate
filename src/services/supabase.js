@@ -48,6 +48,46 @@ export async function fetchRationItems() {
   return extractRationItems(data);
 }
 
+export async function createRationItem(payload) {
+  const response = await fetch(API_ROUTES.rationItems, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to create ration item.'));
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function updateRationItem(payload) {
+  const response = await fetch(API_ROUTES.updateRationItem, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to update ration item.'));
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function updateRationItems(payload) {
   const response = await fetch(API_ROUTES.updateRationItem, {
     method: 'POST',
@@ -74,6 +114,7 @@ export async function signUpWithEmail({ email, password, fullName }) {
     email,
     password,
     options: {
+      emailRedirectTo: typeof window === 'undefined' ? undefined : window.location.origin,
       data: {
         full_name: fullName.trim(),
         setup_complete: false,

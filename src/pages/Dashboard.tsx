@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FormEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type TouchEvent as ReactTouchEvent,
@@ -10,7 +11,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getUserDisplayName } from '../lib/userProfile';
-import { fetchRationItems, signOutUser, updateRationItems } from '../services/supabase';
+import {
+  createRationItem,
+  fetchRationItems,
+  signOutUser,
+  updateRationItem,
+  updateRationItems,
+} from '../services/supabase';
 
 type RationItem = {
   clientKey?: string;
@@ -144,6 +151,17 @@ function getTodayDateString() {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function normalizeRationItems(data: RationItem[]) {
+  return Array.isArray(data)
+    ? data.map((item, index) => ({
+        ...item,
+        clientKey: getItemIdentity(item, index),
+        savedFillPercentage: item.savedFillPercentage ?? null,
+        pendingRank: null,
+      }))
+    : [];
 }
 
 function SwipeCard({ item, isDirty, onSlideLeft, onSlideRight, onResetChange }: SwipeCardProps) {
@@ -349,17 +367,24 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [items, setItems] = useState<RationItem[]>([]);
+  const [suggestionItems, setSuggestionItems] = useState<RationItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [newItemName, setNewItemName] = useState('');
+  const [selectedSuggestionName, setSelectedSuggestionName] = useState('');
   const [loadingItems, setLoadingItems] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSubmittingItem, setIsSubmittingItem] = useState(false);
   const [itemsError, setItemsError] = useState('');
+  const [addItemError, setAddItemError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const addItemInputRef = useRef<HTMLInputElement | null>(null);
   const nextPendingRankRef = useRef(1);
   const displayName = getUserDisplayName(user);
 
@@ -373,16 +398,10 @@ export default function Dashboard() {
           return;
         }
 
-        const normalizedItems = Array.isArray(data)
-          ? data.map((item, index) => ({
-              ...item,
-              clientKey: getItemIdentity(item, index),
-              savedFillPercentage: item.savedFillPercentage ?? null,
-              pendingRank: null,
-            }))
-          : [];
+        const normalizedItems = normalizeRationItems(data);
 
         setItems(normalizedItems);
+        setSuggestionItems(normalizedItems);
       })
       .catch((error) => {
         if (!isActive) {
@@ -441,6 +460,27 @@ export default function Dashboard() {
     window.addEventListener('pointerdown', handlePointerDown);
     return () => window.removeEventListener('pointerdown', handlePointerDown);
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (!isAddDialogOpen) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => addItemInputRef.current?.focus(), 80);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeAddItemDialog();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAddDialogOpen]);
 
   function updateItemByIdentity(targetItem: RationItem, updater: (item: RationItem) => RationItem) {
     setItems((current) => current.map((entry) => (
@@ -557,6 +597,29 @@ export default function Dashboard() {
     searchInputRef.current?.focus();
   }
 
+  function openAddItemDialog() {
+    setIsMenuOpen(false);
+    setNewItemName('');
+    setSelectedSuggestionName('');
+    setAddItemError('');
+    setIsAddDialogOpen(true);
+  }
+
+  function closeAddItemDialog() {
+    setIsAddDialogOpen(false);
+    setNewItemName('');
+    setSelectedSuggestionName('');
+    setAddItemError('');
+  }
+
+  function handleSuggestionPick(suggestion: RationItem) {
+    const suggestionLabel = getItemLabel(suggestion);
+    setNewItemName(suggestionLabel);
+    setSelectedSuggestionName(suggestionLabel.trim().toLowerCase());
+    setAddItemError('');
+    addItemInputRef.current?.focus();
+  }
+
   const filteredItems = items.filter((item) => {
     const term = searchQuery.trim().toLowerCase();
 
@@ -595,6 +658,92 @@ export default function Dashboard() {
 
     return getItemLabel(leftItem).localeCompare(getItemLabel(rightItem));
   });
+
+  const normalizedNewItemName = newItemName.trim().toLowerCase();
+  const uniqueSuggestionItems = Array.from(
+    suggestionItems.reduce((map, item) => {
+      const label = getItemLabel(item).trim();
+
+      if (!label) {
+        return map;
+      }
+
+      const identity = label.toLowerCase();
+
+      if (!map.has(identity)) {
+        map.set(identity, item);
+      }
+
+      return map;
+    }, new Map<string, RationItem>()).values(),
+  );
+  const matchingSuggestions = normalizedNewItemName
+    ? uniqueSuggestionItems
+      .filter((item) => getItemLabel(item).toLowerCase().includes(normalizedNewItemName))
+      .slice(0, 6)
+    : [];
+  const exactMatchingSuggestion = uniqueSuggestionItems.find(
+    (item) => getItemLabel(item).trim().toLowerCase() === normalizedNewItemName,
+  );
+  const hasSelectedSuggestion = !!exactMatchingSuggestion && selectedSuggestionName === normalizedNewItemName;
+  const isUpdateItemMode = !!exactMatchingSuggestion && hasSelectedSuggestion;
+  const canAddItem = !!normalizedNewItemName && (!exactMatchingSuggestion || hasSelectedSuggestion);
+
+  async function handleAddItemSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedName = newItemName.trim();
+
+    if (!trimmedName) {
+      setAddItemError('Enter an item name.');
+      return;
+    }
+
+    if (exactMatchingSuggestion && !hasSelectedSuggestion) {
+      setAddItemError('Select the matching suggestion before updating this item.');
+      return;
+    }
+
+    setIsSubmittingItem(true);
+    setAddItemError('');
+
+    try {
+      if (isUpdateItemMode) {
+        if (exactMatchingSuggestion?.id == null) {
+          throw new Error('The selected item cannot be updated because its id is missing.');
+        }
+
+        await updateRationItem({
+          id: exactMatchingSuggestion.id,
+          item_name: trimmedName,
+          name: trimmedName,
+          quantity: exactMatchingSuggestion.quantity ?? '',
+          unit: exactMatchingSuggestion.unit ?? '',
+          score: getBaseScore(exactMatchingSuggestion),
+          weightage: exactMatchingSuggestion.weightage ?? exactMatchingSuggestion.score ?? getBaseScore(exactMatchingSuggestion),
+        });
+      } else {
+        await createRationItem({
+          item_name: trimmedName,
+          name: trimmedName,
+          quantity: '',
+          unit: '',
+          score: 0,
+          weightage: 0,
+        });
+      }
+
+      const refreshedItems = normalizeRationItems(await fetchRationItems());
+      setItems(refreshedItems);
+      setSuggestionItems(refreshedItems);
+      closeAddItemDialog();
+      setToastMessage(isUpdateItemMode ? `${trimmedName} updated` : `${trimmedName} added`);
+    } catch (error) {
+      setAddItemError(error instanceof Error ? error.message : 'Unable to save item.');
+    } finally {
+      setIsSubmittingItem(false);
+    }
+  }
 
   return (
     <main className="dashboard-page">
@@ -732,9 +881,104 @@ export default function Dashboard() {
               <p className="burger-menu-name">{displayName}</p>
               <p className="burger-menu-email">{user?.email ?? 'Unknown user'}</p>
             </div>
+            <button type="button" className="burger-menu-item" onClick={openAddItemDialog}>
+              Add item
+            </button>
             <button type="button" className="burger-menu-item burger-menu-item-danger" onClick={handleLogout}>
               Logout
             </button>
+          </div>
+        )}
+
+        {isAddDialogOpen && (
+          <div className="dialog-backdrop" onClick={closeAddItemDialog}>
+            <section
+              className="dialog-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-item-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="dialog-header">
+                <div>
+                  <p className="dialog-eyebrow">Menu</p>
+                  <h2 id="add-item-title">Add item</h2>
+                </div>
+                <button
+                  type="button"
+                  className="dialog-close-button"
+                  onClick={closeAddItemDialog}
+                  aria-label="Close add item dialog"
+                >
+                  <ClearIcon />
+                </button>
+              </div>
+
+              <form className="dialog-form" onSubmit={handleAddItemSubmit}>
+                <label htmlFor="add-item-name">Item name</label>
+                <input
+                  ref={addItemInputRef}
+                  id="add-item-name"
+                  type="text"
+                  placeholder="Enter an item name"
+                  value={newItemName}
+                  disabled={isSubmittingItem}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setNewItemName(nextValue);
+                    if (nextValue.trim().toLowerCase() !== selectedSuggestionName) {
+                      setSelectedSuggestionName('');
+                    }
+                    setAddItemError('');
+                  }}
+                  autoComplete="off"
+                />
+                {addItemError && <p className="auth-error">{addItemError}</p>}
+
+                <div className="dialog-suggestions">
+                  <p className="dialog-suggestions-title">Matching items from your current list</p>
+                  {normalizedNewItemName ? (
+                    matchingSuggestions.length > 0 ? (
+                      <ul className="dialog-suggestions-list">
+                        {matchingSuggestions.map((suggestion, index) => {
+                          const suggestionKey = getItemIdentity(suggestion, index);
+                          const suggestionLabel = getItemLabel(suggestion);
+
+                          return (
+                            <li key={suggestionKey}>
+                              <button
+                                type="button"
+                                className={`dialog-suggestion-button${
+                                  selectedSuggestionName === suggestionLabel.trim().toLowerCase() ? ' is-selected' : ''
+                                }`}
+                                onClick={() => handleSuggestionPick(suggestion)}
+                                aria-pressed={selectedSuggestionName === suggestionLabel.trim().toLowerCase()}
+                              >
+                                <span>{suggestionLabel}</span>
+                                <span>{getQuantityLabel(suggestion)}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="dialog-empty-state">No matching items found.</p>
+                    )
+                  ) : (
+                    <p className="dialog-empty-state">Start typing to see matching items.</p>
+                  )}
+                </div>
+
+                <div className="dialog-actions">
+                  <button type="button" className="button-secondary" onClick={closeAddItemDialog} disabled={isSubmittingItem}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={!canAddItem || isSubmittingItem}>
+                    {isSubmittingItem ? (isUpdateItemMode ? 'Updating...' : 'Adding...') : isUpdateItemMode ? 'Update item' : 'Add item'}
+                  </button>
+                </div>
+              </form>
+            </section>
           </div>
         )}
 

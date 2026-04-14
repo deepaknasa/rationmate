@@ -373,6 +373,134 @@ body {
   background: #b91c1c;
 }
 
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 12;
+}
+
+.dialog-card {
+  width: min(100%, 440px);
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.26);
+  display: grid;
+  gap: 18px;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dialog-header h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.dialog-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb !important;
+}
+
+.dialog-close-button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-close-button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dialog-form {
+  display: grid;
+  gap: 14px;
+}
+
+.dialog-suggestions {
+  display: grid;
+  gap: 10px;
+}
+
+.dialog-suggestions-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #475569 !important;
+}
+
+.dialog-suggestions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dialog-suggestion-button {
+  width: 100%;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.dialog-suggestion-button.is-selected {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+.dialog-suggestion-button span:last-child {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.dialog-empty-state {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #64748b !important;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.button-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 .dashboard-search-bar {
   width: 100%;
   display: grid;
@@ -480,6 +608,15 @@ button:disabled {
 
   .burger-menu {
     width: calc(100% - 24px);
+  }
+
+  .dialog-card {
+    padding: 18px;
+  }
+
+  .dialog-suggestion-button {
+    align-items: start;
+    flex-direction: column;
   }
 
   .auth-actions {
