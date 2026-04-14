@@ -4,6 +4,6 @@ export const API_ROUTES = {
 };
 
 export const SUPABASE_API_TARGETS = {
-  rationItems: '/functions/v1/ration-mate-items?select=*',
+  rationItems: '/rest/v1/RationItems?select=*',
   updateRationItem: '/functions/v1/update-ration-item',
 };

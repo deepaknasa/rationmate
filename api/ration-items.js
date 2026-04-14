@@ -16,8 +16,8 @@ export default async function handler(req, res) {
   try {
     const isCreateRequest = req.method === 'POST';
     const url = isCreateRequest
-      ? `${API_URL}/rest/v1/ration-mate-items`
-      : `${API_URL}/rest/v1/ration-mate-items?select=*`;
+      ? `${API_URL}/rest/v1/RationItems`
+      : `${API_URL}/rest/v1/RationItems?select=*`;
 
     const body = typeof req.body === 'string'
       ? req.body
