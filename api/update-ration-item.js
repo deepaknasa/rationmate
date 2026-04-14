@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const API_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
 
@@ -33,4 +33,4 @@ module.exports = async function handler(req, res) {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
-};
+}
