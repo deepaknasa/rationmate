@@ -1,3 +1,8 @@
+import {
+  mapRationItemWritePayload,
+  normalizeRationItemsResponse,
+} from './ration-item-mapping.js';
+
 export default async function handler(req, res) {
   const API_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
@@ -18,10 +23,7 @@ export default async function handler(req, res) {
     const url = isCreateRequest
       ? `${API_URL}/rest/v1/RationItems`
       : `${API_URL}/rest/v1/RationItems?select=*`;
-
-    const body = typeof req.body === 'string'
-      ? req.body
-      : JSON.stringify(req.body ?? {});
+    const requestPayload = isCreateRequest ? mapRationItemWritePayload(req.body ?? {}) : null;
 
     const response = await fetch(url, {
       method: req.method,
@@ -36,13 +38,18 @@ export default async function handler(req, res) {
             }
           : {}),
       },
-      ...(isCreateRequest ? { body } : {}),
+      ...(isCreateRequest ? { body: JSON.stringify(requestPayload) } : {}),
     });
 
     const text = await response.text();
 
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-    return res.status(response.status).send(text);
+    try {
+      const normalizedPayload = normalizeRationItemsResponse(JSON.parse(text));
+      return res.status(response.status).json(normalizedPayload);
+    } catch {
+      res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+      return res.status(response.status).send(text);
+    }
   } catch (error) {
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Unknown error',

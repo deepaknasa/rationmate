@@ -1,3 +1,8 @@
+import {
+  mapRationItemsWritePayload,
+  normalizeRationItemsResponse,
+} from './ration-item-mapping.js';
+
 export default async function handler(req, res) {
   const API_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
@@ -9,9 +14,7 @@ export default async function handler(req, res) {
 
   try {
     const url = `${API_URL}/functions/v1/update-ration-item`;
-    const body = typeof req.body === 'string'
-      ? req.body
-      : JSON.stringify(req.body ?? {});
+    const requestPayload = mapRationItemsWritePayload(req.body ?? {});
 
     const response = await fetch(url, {
       method: 'POST',
@@ -21,13 +24,20 @@ export default async function handler(req, res) {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body,
+      body: JSON.stringify(requestPayload),
     });
 
     const text = await response.text();
 
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-    res.status(response.status).send(text);
+    try {
+      const normalizedPayload = normalizeRationItemsResponse(JSON.parse(text));
+      res.status(response.status).json(normalizedPayload);
+      return;
+    } catch {
+      res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+      res.status(response.status).send(text);
+      return;
+    }
   } catch (error) {
     res.status(500).json({
       error: error instanceof Error ? error.message : 'Unknown error',
